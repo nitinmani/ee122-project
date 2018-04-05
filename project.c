@@ -86,9 +86,9 @@ int main () {
     //initializing source
     struct queue q1;
     init_queue(&q1);
-    struct data d1 = {1,2,666,0,0};
-    struct data d2 = {1,2,777,0,0};
-    struct data d3 = {1,2,888,0,0};
+    struct data d1 = {1,2,666,0,0, 1000};
+    struct data d2 = {1,2,777,0,0, 2000};
+    struct data d3 = {1,2,888,0,0, 3000};
     enqueue(&q1, &d1);
     enqueue(&q1, &d2);
     enqueue(&q1, &d3);

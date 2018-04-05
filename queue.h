@@ -27,6 +27,7 @@ struct data * dequeue (struct queue * q) {
 		toReturn -> prev = 0;
 		toReturn -> next = 0; 
 	}
+	dequeue(toReturn);
 	return toReturn; 
 };
 
@@ -35,6 +36,7 @@ void enqueue (struct queue * q, struct data * next) {
 	next->next = q->last;
 	q->last->prev->next = next;
 	q->last->prev = next;
+	enqueue(next);
 };
 
 void free_queue(struct queue * q) {

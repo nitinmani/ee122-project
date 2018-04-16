@@ -212,24 +212,38 @@ class Source:
 				self.host_map[idx].TAT = last_pkt_end
 				self.host_map[idx].throughput = last_pkt_end*1.0/len(self.host_map[idx].processed_pkts)
 
+## DO NOT MODIFY THESE LINES 
 A = Host('A')
 B = Host('B')
 C = Host('C')
 D = Host('D')
 source = Source(A, B, C, D)
+##
+
+
+# Step 1: Before running each scheduling alg, populate the host queues. 
+# populate_queue(queue, host, num_pkts)
+# if num_pkts is None, then a random number of packets are generated
 source.populate_queue(source.A, A, 10000)
 source.populate_queue(source.B, B, 10000)
 source.populate_queue(source.C, C, 10000)
 source.populate_queue(source.D, D, 10000)
 
+# Step 2: Run the algorithm (fifo, sjf, rand, rr, wrr, fq, wfq, lottery)
+# if running fifo or sjf, the order the hosts are processed in is A, B, C, D
+# if running sjf, make sure num_pkts(A) <= num_pkts(B) <= num_pkts(C) <= num_pkts(D)
 print "\n\n"
 print "Random Queueing"
 source.rand()
+
+# Step 3: Print the hosts to get information on the turnaround time and the packet throughput
 print(A)
 print(B)
 print(C)
 print(D)
 print "\n\n"
+
+# Step 4: Rinse and repeat
 source.populate_queue(source.A, A, 10000)
 source.populate_queue(source.B, B, 10000)
 source.populate_queue(source.C, C, 10000)

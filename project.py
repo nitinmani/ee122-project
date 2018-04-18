@@ -125,7 +125,7 @@ class Source:
 			idx = count % len(lst)
 			queue = self.map[lst[idx]]
 			if not queue.empty():
-				weight = weights[lst[idx]]
+				weight = weights[idx]
 				i = 0
 				while i < weight and not queue.empty():
 					item = queue.get()
@@ -161,7 +161,7 @@ class Source:
 		for i in range(len(lst)):
 			queue =  self.map[i+1]
 			host = self.host_map[i+1]
-			weight = weights[i+1]
+			weight = weights[i]
 			last_pkt_end = 0
 			while not queue.empty():
 				item = queue.get()
@@ -172,52 +172,21 @@ class Source:
 			host.TAT = last_pkt_end
 			host.throughput = host.num_pkts/last_pkt_end*1.0
 
-	def lottery(self, probs):
-		#sum(probs) = 100
-		lst = [1,2,3,4]
-		tickets = [i for i in range(100)]
-		shuffle(tickets)
+	def lottery(self, prob):
+		lst = {1: prob[0], 2: prob[1], 3:prob[2], 4:prob[3]}
 		last_pkt_end = 0
-		tickets_A = tickets[:probs[0]]
-		tickets_B = tickets[probs[0] : probs[0] + probs[1]]
-		tickets_C = tickets[probs[0] + probs[1] : probs[0] + probs[1] + probs[2]]
-		tickets_D = tickets[probs[0] + probs[1] + probs[2]:]
 		while len(lst) > 0:
-			tick = randint(0, 99)
-			queue = None
-			idx = 0
-			if tickets_A != None and tick in tickets_A:
-				idx = 1
-			if tickets_B != None and tick in tickets_B:
-				idx = 2
-			if tickets_C != None and tick in tickets_C:
-				idx = 3
-			if tickets_D != None and tick in tickets_D:
-				idx = 4
-			if idx != 0: 
-				queue = self.map[idx]
-				item = queue.get()
-				item.start = last_pkt_end
-				item.end = item.start + TRANSMISSION_DELAY
-				last_pkt_end = item.end
-				self.host_map[idx].add_pkt(item)
-				if queue.empty():
-					if idx == 1:
-						tickets_A = None
-						lst.remove(1)
-					elif idx == 2:
-						tickets_B = None
-						lst.remove(2)
-					elif idx == 3: 
-						tickets_C = None
-						lst.remove(3)
-					else:
-						tickets_D = None
-						lst.remove(4)
-					self.host_map[idx].TAT = last_pkt_end
-					print(len(self.host_map[idx].processed_pkts))
-					self.host_map[idx].throughput = len(self.host_map[idx].processed_pkts)/last_pkt_end*1.0
-
+			elem = choice([x for x in lst for y in range(lst[x])])
+			queue = self.map[elem]
+			item = queue.get()
+			item.start = last_pkt_end
+			item.end = item.start + TRANSMISSION_DELAY
+			last_pkt_end = item.end
+			self.host_map[elem].add_pkt(item)
+			if queue.empty():
+				del lst[elem]
+				self.host_map[elem].TAT = last_pkt_end
+				self.host_map[elem].throughput = self.host_map[elem].num_pkts/last_pkt_end*1.0
 '''
 	These will print out comma seperated values that you could copy as
 	an array into the ipython notebook
@@ -230,72 +199,70 @@ D = Host('D')
 source = Source(A, B, C, D)
 
 
+#to print out the indices
+i = 1
+toPrint = ""
+while i < 100000:
+	toPrint += str(i)
+	toPrint +=  ","
+	i += 1000
+print(toPrint)
 
+#This is for finding the individual throughputs
+#Throughput for varying the packets of the first source
+i = 1
+toPrint1 = ""
+toPrint2 = ""
+toPrint3 = ""
+toPrint4 = ""
+while i < 100000:
+	source.populate_queue(source.A, A, i)
+	source.populate_queue(source.B, B, 10000)
+	source.populate_queue(source.C, C, 10000)
+	source.populate_queue(source.D, D, 10000)
+	#change this line to use other protocols
+	source.lottery([100, 1000, 1000, 1000])
+	toPrint1 += str(A.throughput)
+	toPrint1 += ","
+	toPrint2 += str(B.throughput)
+	toPrint2 += ","
+	toPrint3 += str(C.throughput)
+	toPrint3 += ","
+	toPrint4 += str(D.throughput)
+	toPrint4 += ","
+	i += 1000
+print(toPrint1)
+print(toPrint2)
+print(toPrint3)
+print(toPrint4)
 
-# #to print out the indices
-# i = 1
-# toPrint = ""
-# while i < 100000:
-# 	toPrint += str(i)
-# 	toPrint +=  ","
-# 	i += 1000
-# print(toPrint)
-
-# #This is for finding the individual throughputs
-# #Throughput for varying the packets of the first source
-# i = 1
-# toPrint1 = ""
-# toPrint2 = ""
-# toPrint3 = ""
-# toPrint4 = ""
-# while i < 100000:
-# 	source.populate_queue(source.A, A, i)
-# 	source.populate_queue(source.B, B, 10000)
-# 	source.populate_queue(source.C, C, 10000)
-# 	source.populate_queue(source.D, D, 10000)
-# 	#change this line to use other protocols
-# 	source.rand()
-# 	toPrint1 += str(A.throughput)
-# 	toPrint1 += ","
-# 	toPrint2 += str(B.throughput)
-# 	toPrint2 += ","
-# 	toPrint3 += str(C.throughput)
-# 	toPrint3 += ","
-# 	toPrint4 += str(D.throughput)
-# 	toPrint4 += ","
-# 	i += 1000
-# print(toPrint1)
-# print(toPrint2)
-# print(toPrint3)
-# print(toPrint4)
-
-# #This is for finding the individual turnaroud times
-# #TAT for varying the packets of the first source
-# i = 10001
-# toPrint1 = ""
-# toPrint2 = ""
-# toPrint3 = ""
-# toPrint4 = ""
-# while i < 100000:
-# 	source.populate_queue(source.A, A, i)
-# 	source.populate_queue(source.B, B, 10000)
-# 	source.populate_queue(source.C, C, 10000)
-# 	source.populate_queue(source.D, D, 10000)
-# 	#change this line to use other protocols
-# 	source.rand()
-# 	toPrint1 += str(A.TAT)
-# 	toPrint1 += ","
-# 	toPrint2 += str(B.TAT)
-# 	toPrint2 += ","
-# 	toPrint3 += str(C.TAT)
-# 	toPrint3 += ","
-# 	toPrint4 += str(D.TAT)
-# 	toPrint4 += ","
-# 	i += 1000
-# print(toPrint1)
-# print(toPrint2)
-# print(toPrint3)
-# print(toPrint4)
+#This is for finding the individual turnaroud times
+#TAT for varying the packets of the first source
+i = 1
+toPrint1 = ""
+toPrint2 = ""
+toPrint3 = ""
+toPrint4 = ""
+while i < 100000:
+	source.populate_queue(source.A, A, i)
+	source.populate_queue(source.B, B, 10000)
+	source.populate_queue(source.C, C, 10000)
+	source.populate_queue(source.D, D, 10000)
+	#change this line to use other protocols
+	source.lottery([100, 1000, 1000, 1000])
+	toPrint1 += str(A.TAT)
+	toPrint1 += ","
+	toPrint2 += str(B.TAT)
+	toPrint2 += ","
+	toPrint3 += str(C.TAT)
+	toPrint3 += ","
+	toPrint4 += str(D.TAT)
+	toPrint4 += ","
+	i += 1000
+print(toPrint1)
+print(toPrint2)
+print(toPrint3)
+print(toPrint4)
 
 
 #to print out the indices
@@ -317,7 +284,7 @@ while i < 100000:
 	source.populate_queue(source.C, C, 10000)
 	source.populate_queue(source.D, D, 10000)
 	#change this line to use other protocols
-	source.fifo()
+	source.lottery([100, 1000, 1000, 1000])
 	toPrint1 += str((A.throughput + B.throughput + C.throughput + D.throughput) / 4.0)
 	toPrint1 += ","
 	i += 1000
@@ -333,7 +300,7 @@ while i < 100000:
 	source.populate_queue(source.C, C, 10000)
 	source.populate_queue(source.D, D, 10000)
 	#change this line to use other protocols
-	source.fifo()
+	source.lottery([100, 1000, 1000, 1000])
 	toPrint1 += str((A.TAT + B.TAT + C.TAT + D.TAT) / 4.0)
 	toPrint1 += ","
 	i += 1000

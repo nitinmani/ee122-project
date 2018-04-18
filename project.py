@@ -1,6 +1,6 @@
 from datetime import datetime
 from random import *
-import numpy as np
+#import numpy as np
 import Queue
 
 PACKET_SIZE = 10000 #bits
@@ -45,7 +45,7 @@ class Source:
 	def populate_queue(self, q, host, num=None):
 		if num == None:
 			num = randint(1000, 10000) #populate with between 1000 - 10000 packets
-		print "For host: " + host.name + " the number of packets is: " + str(num)
+		#print "For host: " + host.name + " the number of packets is: " + str(num)
 		host.set_num_pkts(num)
 		for i in range(num):
 			q.put(Packet(host.name))
@@ -64,7 +64,7 @@ class Source:
 			if queue.empty():
 				lst.remove(elem)
 				self.host_map[elem].TAT = last_pkt_end
-				self.host_map[elem].throughput = self.host_map[elem].num_pkts/1.0*last_pkt_end
+				self.host_map[elem].throughput = self.host_map[elem].num_pkts/last_pkt_end*1.0
 
 	def fifo(self):
 		# by default, assume A, B, C, D
@@ -96,7 +96,7 @@ class Source:
 				last_pkt_end = item.end
 				host.add_pkt(item)
 			host.TAT = last_pkt_end
-			host.throughput = host.num_pkts/1.0*last_pkt_end
+			host.throughput = host.num_pkts/last_pkt_end*1.0
 
 	def rr(self):
 		lst = [1, 2, 3, 4]
@@ -113,7 +113,7 @@ class Source:
 				self.host_map[lst[idx]].add_pkt(item)
 			if queue.empty():
 				self.host_map[lst[idx]].TAT = last_pkt_end
-				self.host_map[lst[idx]].throughput = self.host_map[lst[idx]].num_pkts/1.0*last_pkt_end
+				self.host_map[lst[idx]].throughput = self.host_map[lst[idx]].num_pkts/last_pkt_end*1.0
 				lst.remove(lst[idx])
 			count += 1
 
@@ -136,7 +136,7 @@ class Source:
 					i += 1
 			if queue.empty():
 				self.host_map[lst[idx]].TAT = last_pkt_end
-				self.host_map[lst[idx]].throughput = self.host_map[lst[idx]].num_pkts/1.0*last_pkt_end
+				self.host_map[lst[idx]].throughput = self.host_map[lst[idx]].num_pkts/last_pkt_end*1.0
 				lst.remove(lst[idx])
 			count += 1
 
@@ -175,13 +175,13 @@ class Source:
 	def lottery(self, probs):
 		#sum(probs) = 100
 		lst = [1,2,3,4]
-		tickets = np.arange(100)
+		tickets = [i for i in range(100)]
 		shuffle(tickets)
 		last_pkt_end = 0
 		tickets_A = tickets[:probs[0]]
-		tickets_B = tickets[probs[0] : probs[1]]
-		tickets_C = tickets[probs[1] : probs[2]]
-		tickets_D = tickets[probs[2]:]
+		tickets_B = tickets[probs[0] : probs[0] + probs[1]]
+		tickets_C = tickets[probs[0] + probs[1] : probs[0] + probs[1] + probs[2]]
+		tickets_D = tickets[probs[0] + probs[1] + probs[2]:]
 		while len(lst) > 0:
 			tick = randint(0, 99)
 			queue = None
@@ -194,100 +194,148 @@ class Source:
 				idx = 3
 			if tickets_D != None and tick in tickets_D:
 				idx = 4
-			queue = self.map[idx]
-			item = queue.get()
-			item.start = last_pkt_end
-			item.end = item.start + TRANSMISSION_DELAY
-			last_pkt_end = item.end
-			self.host_map[idx].add_pkt(item)
-			if queue.empty():
-				if idx == 1:
-					tickets_A = None
-				elif idx == 2:
-					tickets_B = None
-				elif idx == 3: 
-					tickets_C = None
-				else:
-					tickets_D = None
-				self.host_map[idx].TAT = last_pkt_end
-				self.host_map[idx].throughput = last_pkt_end*1.0/len(self.host_map[idx].processed_pkts)
+			if idx != 0: 
+				queue = self.map[idx]
+				item = queue.get()
+				item.start = last_pkt_end
+				item.end = item.start + TRANSMISSION_DELAY
+				last_pkt_end = item.end
+				self.host_map[idx].add_pkt(item)
+				if queue.empty():
+					if idx == 1:
+						tickets_A = None
+						lst.remove(1)
+					elif idx == 2:
+						tickets_B = None
+						lst.remove(2)
+					elif idx == 3: 
+						tickets_C = None
+						lst.remove(3)
+					else:
+						tickets_D = None
+						lst.remove(4)
+					self.host_map[idx].TAT = last_pkt_end
+					print(len(self.host_map[idx].processed_pkts))
+					self.host_map[idx].throughput = len(self.host_map[idx].processed_pkts)/last_pkt_end*1.0
 
-## DO NOT MODIFY THESE LINES 
+'''
+	These will print out comma seperated values that you could copy as
+	an array into the ipython notebook
+'''
+
 A = Host('A')
 B = Host('B')
 C = Host('C')
 D = Host('D')
 source = Source(A, B, C, D)
-##
 
 
-# Step 1: Before running each scheduling alg, populate the host queues. 
-# populate_queue(queue, host, num_pkts)
-# if num_pkts is None, then a random number of packets are generated
-source.populate_queue(source.A, A, 10000)
-source.populate_queue(source.B, B, 10000)
-source.populate_queue(source.C, C, 10000)
-source.populate_queue(source.D, D, 10000)
 
-# Step 2: Run the algorithm (fifo, sjf, rand, rr, wrr, fq, wfq, lottery)
-# if running fifo or sjf, the order the hosts are processed in is A, B, C, D
-# if running sjf, make sure num_pkts(A) <= num_pkts(B) <= num_pkts(C) <= num_pkts(D)
-print "\n\n"
-print "Random Queueing"
-source.rand()
 
-# Step 3: Print the hosts to get information on the turnaround time and the packet throughput
-print(A)
-print(B)
-print(C)
-print(D)
-print "\n\n"
+# #to print out the indices
+# i = 1
+# toPrint = ""
+# while i < 100000:
+# 	toPrint += str(i)
+# 	toPrint +=  ","
+# 	i += 1000
+# print(toPrint)
 
-# Step 4: Rinse and repeat
-source.populate_queue(source.A, A, 10000)
-source.populate_queue(source.B, B, 10000)
-source.populate_queue(source.C, C, 10000)
-source.populate_queue(source.D, D, 10000)
-print "\n\n"
-print "FIFO Queueing"
-source.fifo()
-print(A)
-print(B)
-print(C)
-print(D)
-print "\n\n"
-source.populate_queue(source.A, A, 10000)
-source.populate_queue(source.B, B, 10000)
-source.populate_queue(source.C, C, 10000)
-source.populate_queue(source.D, D, 10000)
-print "\n\n"
-print "Round Robin Queueing"
-source.rr()
-print(A)
-print(B)
-print(C)
-print(D)
-print "\n\n"
-source.populate_queue(source.A, A, 10000)
-source.populate_queue(source.B, B, 10000)
-source.populate_queue(source.C, C, 10000)
-source.populate_queue(source.D, D, 10000)
-print "\n\n"
-print "Weighted Round Robin Queueing"
-source.wrr({1:10, 2:20, 3:30, 4:40})
-print(A)
-print(B)
-print(C)
-print(D)
-print "\n\n"
-print "Fair Queueing"
-source.populate_queue(source.A, A, 10000)
-source.populate_queue(source.B, B, 10000)
-source.populate_queue(source.C, C, 10000)
-source.populate_queue(source.D, D, 10000)
-print "\n\n"
-source.fq()
-print(A)
-print(B)
-print(C)
-print(D)
+# #This is for finding the individual throughputs
+# #Throughput for varying the packets of the first source
+# i = 1
+# toPrint1 = ""
+# toPrint2 = ""
+# toPrint3 = ""
+# toPrint4 = ""
+# while i < 100000:
+# 	source.populate_queue(source.A, A, i)
+# 	source.populate_queue(source.B, B, 10000)
+# 	source.populate_queue(source.C, C, 10000)
+# 	source.populate_queue(source.D, D, 10000)
+# 	#change this line to use other protocols
+# 	source.rand()
+# 	toPrint1 += str(A.throughput)
+# 	toPrint1 += ","
+# 	toPrint2 += str(B.throughput)
+# 	toPrint2 += ","
+# 	toPrint3 += str(C.throughput)
+# 	toPrint3 += ","
+# 	toPrint4 += str(D.throughput)
+# 	toPrint4 += ","
+# 	i += 1000
+# print(toPrint1)
+# print(toPrint2)
+# print(toPrint3)
+# print(toPrint4)
+
+# #This is for finding the individual turnaroud times
+# #TAT for varying the packets of the first source
+# i = 10001
+# toPrint1 = ""
+# toPrint2 = ""
+# toPrint3 = ""
+# toPrint4 = ""
+# while i < 100000:
+# 	source.populate_queue(source.A, A, i)
+# 	source.populate_queue(source.B, B, 10000)
+# 	source.populate_queue(source.C, C, 10000)
+# 	source.populate_queue(source.D, D, 10000)
+# 	#change this line to use other protocols
+# 	source.rand()
+# 	toPrint1 += str(A.TAT)
+# 	toPrint1 += ","
+# 	toPrint2 += str(B.TAT)
+# 	toPrint2 += ","
+# 	toPrint3 += str(C.TAT)
+# 	toPrint3 += ","
+# 	toPrint4 += str(D.TAT)
+# 	toPrint4 += ","
+# 	i += 1000
+# print(toPrint1)
+# print(toPrint2)
+# print(toPrint3)
+# print(toPrint4)
+
+
+#to print out the indices
+i = 1
+toPrint = ""
+while i < 100000:
+	toPrint += str(i)
+	toPrint +=  ","
+	i += 1000
+print(toPrint)
+
+#This is for finding the average throughputs
+#Throughput for varying the packets of the first source
+i = 1
+toPrint1 = ""
+while i < 100000:
+	source.populate_queue(source.A, A, i)
+	source.populate_queue(source.B, B, 10000)
+	source.populate_queue(source.C, C, 10000)
+	source.populate_queue(source.D, D, 10000)
+	#change this line to use other protocols
+	source.fifo()
+	toPrint1 += str((A.throughput + B.throughput + C.throughput + D.throughput) / 4.0)
+	toPrint1 += ","
+	i += 1000
+print(toPrint1)
+
+#This is for finding the average turnaroud times
+#TAT for varying the packets of the first source
+i = 1
+toPrint1 = ""
+while i < 100000:
+	source.populate_queue(source.A, A, i)
+	source.populate_queue(source.B, B, 10000)
+	source.populate_queue(source.C, C, 10000)
+	source.populate_queue(source.D, D, 10000)
+	#change this line to use other protocols
+	source.fifo()
+	toPrint1 += str((A.TAT + B.TAT + C.TAT + D.TAT) / 4.0)
+	toPrint1 += ","
+	i += 1000
+print(toPrint1)
+
